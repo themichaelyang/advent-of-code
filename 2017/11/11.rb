@@ -6,8 +6,18 @@ def read_input(name='input')
 end
 
 def part_1
-  path = read_input
+  distance(*walk(read_input).to_a.last)
+end
+
+def part_2
+  walk(read_input).map { |x, y| distance(x, y) }.max
+end
+
+def walk(path, &blk)
+  return to_enum(:walk, path) unless block_given?
+
   x, y = [0, 0]
+  yield [x, y]
 
   path.each do |p|
     case p
@@ -18,16 +28,8 @@ def part_1
     when 'se' then x, y = se(x, y)
     when 'sw' then x, y = sw(x, y)
     end
-  end 
 
-  p [x, y]
-
-  # x.abs + y.abs - [x.abs.div(2) + [[y, 1].max, 0].min, y.abs].min
-  if y < 0
-    # We have access to down diagonals starting on (0, 0)
-    x.abs + y.abs - [x.abs.div(2) + 1, y.abs].min
-  else
-    x.abs + y.abs - [x.abs.div(2), y.abs].min
+    yield [x, y]
   end
 end
 
@@ -63,4 +65,14 @@ def sw(x, y)
   end
 end
 
+def distance(x, y)
+  if y < 0
+    # We have access to down diagonals starting on (0, 0)
+    x.abs + y.abs - [x.abs.div(2) + 1, y.abs].min
+  else
+    x.abs + y.abs - [x.abs.div(2), y.abs].min
+  end
+end
+
 puts part_1
+puts part_2
