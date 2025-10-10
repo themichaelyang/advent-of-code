@@ -1,4 +1,6 @@
 class Grid
+  attr_accessor :matrix
+
   def initialize(matrix)
     @matrix = matrix
   end
@@ -27,6 +29,8 @@ class Grid
   end
 
   def each_coord(&blk)
+    return to_enum(:each_coord) unless block_given?
+
     (0...self.height).flat_map { |y|
       (0...self.width).map { |x| 
         yield Coord.new(x, y)
@@ -123,7 +127,12 @@ def default_check_visited(type, coord, grid)
   grid.at(coord) == type.downcase
 end
 
-def fill_region(grid, start, check_visited=method(:default_check_visited), on_visit=method(:default_on_visit))
+def fill_region(
+  grid, 
+  start, 
+  check_visited=method(:default_check_visited), 
+  on_visit=method(:default_on_visit)
+)
   perimeter = 0
   area = 0
 
@@ -204,7 +213,7 @@ def outline_clockwise(grid, start)
 
       vertex += direction
     else
-      p [vertex, direction.to_s]
+      # p [vertex, direction.to_s]
       direction = direction.rotate_clockwise
       changed_direction = true
     end
@@ -255,25 +264,66 @@ def part_1
   end
 end
 
+Region = Struct.new(:type, :perimeter, :area, :sides)
+
+class Mapper
+  attr_accessor :region
+
+  def initialize(region, region_map)
+    @region = region
+    @map = region_map
+  end
+
+  def map_region(type, coord, _original_grid)
+    @map.set(coord, @region)
+  end
+
+  def in_region?(type, coord, _original_grid)
+    @map.at(coord) == @region
+  end
+end
+
+
 def part_2
-  parsed = parse_input(sample_input_2)
+  parsed = parse_input(sample_input)
   garden = Grid.new(parsed)
+
+  # Track "holes" in the region via shared reference set on every
+  # visited spot. We need to do this because regions can share types.
+  # Instead of modifying the garden, we can modify the region map.
+  #
+  # NOTE! Don't do: `[nil] * garden.width] * garden.height` or it reuses
+  # the reference for the first row everywhere...
+  region_map = Grid.new(Array.new(garden.height) { [nil] * garden.width })
 
   regions = garden.each_coord do |coord|
     type = garden.at(coord) 
-    visited = type.downcase == type 
-    if type && !visited
-      region = fill_region(garden, coord)
-      region[:sides] = outline_clockwise(garden, coord).to_a
-      puts coord
-      puts type
-      puts plot_corners(garden, region[:sides])
+    visited = region_map.at(coord).is_a?(Region)
+    p [coord, type, visited, region_map.at(coord)&.type]
+
+    if !visited
+      region = Region.new(type)
+      mapper = Mapper.new(region, region_map)
+
+      region_hash = fill_region(
+        garden, 
+        coord, 
+        mapper.method(:in_region?),
+        mapper.method(:map_region)
+      )
+
+      region.area = region_hash[:area]
+      region.perimeter = region_hash[:perimeter]
+      region.sides = outline_clockwise(garden, coord).to_a
       region
     end
   end.compact
 
-  regions.sum {|r| r[:sides].count * r[:area]}
+  regions.uniq
+  p region_map.matrix.flatten
+  # regions.sum {|r| r[:sides].count * r[:area]}
 end
 
-p part_1
-p part_2
+# p part_1
+# p part_2
+part_2
