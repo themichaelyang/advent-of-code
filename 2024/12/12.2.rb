@@ -305,25 +305,24 @@ def part_2
       region = Region.new(type)
       mapper = Mapper.new(region, region_map)
 
-      region_hash = fill_region(
+      region_info = fill_region(
         garden, 
         coord, 
         mapper.method(:in_region?),
         mapper.method(:map_region)
       )
 
-      region.area = region_hash[:area]
-      region.perimeter = region_hash[:perimeter]
+      region.area = region_info[:area]
+      region.perimeter = region_info[:perimeter]
       region.sides = outline_clockwise(garden, coord).to_a
       region
     end
   end.compact
 
   regions.uniq
-  p region_map.matrix.flatten
   # regions.sum {|r| r[:sides].count * r[:area]}
 end
 
 # p part_1
 # p part_2
-part_2
+p part_2
