@@ -123,21 +123,22 @@ def default_on_visit(type, coord, grid)
   grid.set(coord, type.downcase)
 end
 
-def default_check_visited(type, coord, grid)
+def default_check_visit(type, coord, grid)
   grid.at(coord) == type.downcase
 end
-
 def fill_region(
   grid, 
   start, 
-  check_visited=method(:default_check_visited), 
-  on_visit=method(:default_on_visit)
+  check_visit=method(:default_check_visit), 
+  on_visit=method(:default_on_visit),
+  outline=nil
 )
   perimeter = 0
   area = 0
 
   type = grid.at(start)
   stack = [start]
+  all_corners = Set.new
 
   while stack.length > 0 do
     coord = stack.pop
@@ -145,11 +146,18 @@ def fill_region(
 
     connected = adjacent.select {|c| grid.at(c) == type}
     # visited = adjacent.select {|c| grid.at(c) == type.downcase}
-    visited = adjacent.select {|c| check_visited.call(type, c, grid)}
+    # elements that are connected but visited
+    visited = adjacent.select {|c| check_visit.call(type, c, grid)}
     
     if grid.at(coord) == type
       perimeter += 4 - connected.length - visited.length
       area += 1
+    end
+
+    if outline && connected.length != 4
+      p coord
+      corners = outline.call(coord)
+      all_corners.add(corners)
     end
 
     stack.concat(connected - visited)
@@ -159,7 +167,7 @@ def fill_region(
     # grid.set(coord, type.downcase)
   end
 
-  {type: type, perimeter: perimeter, area: area}
+  {type: type, perimeter: perimeter, area: area, all_corners: all_corners}
 end
 
 # For a given "vertex space" coordinate and direction,
@@ -193,8 +201,11 @@ end
 
 # Follow clockwise around the border until we get back to a corner we've seen.
 # Add a corner every time we change direction.
-def outline_clockwise(grid, start)
-  corners = Set.new()
+# 
+# I think to get the inner "holes", we need to check for NOT the same type looking clockwise
+# (or check counterclockwise).
+def outline_clockwise(grid, start, check_visit=nil, on_visit=nil)
+  corners = Set.new
   type = grid.at(start)
 
   direction = Direction.north
@@ -202,8 +213,16 @@ def outline_clockwise(grid, start)
   changed_direction = false
 
   while !corners.include?(vertex)
+    # if !check_visit.nil? && !check_visit&.call(type, vertex, grid)
+    #   return nil
+    # end
+
     lefthand, righthand = relative_left_and_right(vertex, direction)
     along_edge = grid.at(righthand) == type && grid.at(lefthand) != type
+
+    if on_visit && !changed_direction
+      on_visit.call(type, vertex, grid)
+    end
 
     if along_edge
       if changed_direction
@@ -265,56 +284,81 @@ def part_1
 end
 
 Region = Struct.new(:type, :perimeter, :area, :sides)
-
-class Mapper
-  attr_accessor :region
-
-  def initialize(region, region_map)
-    @region = region
-    @map = region_map
-  end
-
-  def map_region(type, coord, _original_grid)
-    @map.set(coord, @region)
-  end
-
-  def in_region?(type, coord, _original_grid)
-    @map.at(coord) == @region
+MapEntry = Struct.new(:region, :area_visited, :edge_visited) do
+  def initialize
+    @region = nil
+    @area_visited = false
+    @edge_visited = false
   end
 end
 
+def make_area_check_visit(map, region)
+  lambda do |_t, c, _g|
+    map.within?(c) && map.at(c).area_visited && map.at(c)&.region == region 
+  end
+end
+
+def make_on_area_visit(map, region)
+  lambda do |_t, c, _g| 
+    map.at(c).area_visited = true 
+    map.at(c).region = region
+  end
+end
+
+def make_edge_check_visit(map, region)
+  lambda do |_t, c, _g|
+    map.within?(c) && map.at(c).edge_visited && map.at(c)&.region == region 
+  end
+end
+
+def make_on_edge_visit(map, region)
+  lambda do |_t, c, _g| 
+    map.at(c).edge_visited = true 
+    # map.at(c).region ||= region
+  end
+end
 
 def part_2
-  parsed = parse_input(sample_input)
+  parsed = parse_input(sample_input_2)
   garden = Grid.new(parsed)
 
-  # Track "holes" in the region via shared reference set on every
-  # visited spot. We need to do this because regions can share types.
-  # Instead of modifying the garden, we can modify the region map.
-  #
   # NOTE! Don't do: `[nil] * garden.width] * garden.height` or it reuses
   # the reference for the first row everywhere...
-  region_map = Grid.new(Array.new(garden.height) { [nil] * garden.width })
+  map = Grid.new(Array.new(garden.height + 1) { Array.new(garden.width + 1) { MapEntry.new }})
 
   regions = garden.each_coord do |coord|
     type = garden.at(coord) 
-    visited = region_map.at(coord).is_a?(Region)
-    p [coord, type, visited, region_map.at(coord)&.type]
+    entry = map.at(coord)
+    visited = entry.area_visited
+
+    # p [coord]
 
     if !visited
       region = Region.new(type)
-      mapper = Mapper.new(region, region_map)
+
+      outline = lambda do |c|
+        outline_clockwise(
+          garden,
+          coord,
+          make_edge_check_visit(map, region),
+          make_on_edge_visit(map, region)
+        ).to_a
+      end
 
       region_info = fill_region(
-        garden, 
+        garden,
         coord, 
-        mapper.method(:in_region?),
-        mapper.method(:map_region)
+        make_area_check_visit(map, region),
+        make_on_area_visit(map, region),
+        outline
       )
 
       region.area = region_info[:area]
       region.perimeter = region_info[:perimeter]
-      region.sides = outline_clockwise(garden, coord).to_a
+      p region_info[:all_corners]
+
+      # region.sides = corners.length
+      # puts plot_corners(garden, corners)
       region
     end
   end.compact
