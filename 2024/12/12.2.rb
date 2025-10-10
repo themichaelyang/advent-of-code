@@ -97,28 +97,30 @@ def relative_left_and_right(vertex, facing)
   [vertex + dl, vertex + dr]
 end
 
+# Follow clockwise around the border until we get back to a corner we've seen.
+# Add a corner every time we change direction.
 def outline_clockwise(grid, start)
   corners = Set.new()
   type = grid.at(start)
 
   direction = Direction.north
   vertex = start
-  turned = false
+  changed_direction = false
 
   while !corners.include?(vertex)
-    westhand, easthand = relative_left_and_right(vertex, direction)
-    continues_edge = grid.at(easthand) == type && grid.at(westhand) != type
+    lefthand, righthand = relative_left_and_right(vertex, direction)
+    along_edge = grid.at(righthand) == type && grid.at(lefthand) != type
 
-    if continues_edge
-      if turned
+    if along_edge 
+      if changed_direction
         corners.add(vertex)
-        turned = false
+        changed_direction = false
       end
 
       vertex += direction
     else
       direction = direction.rotate_clockwise
-      turned = true
+      changed_direction = true
     end
   end
 
@@ -136,18 +138,15 @@ def plot_corners(grid, corners)
         '+--'
       end
     end
-
-    # lines.append(corner_row.join + '-')
+    
     lines.append(corner_row.join)
 
     block_row = (grid.width + 1).times.map do |x|
       " #{grid.at(Coord.new(x, y)) || ' '}"
     end
-    # lines.append('|' + block_row.join('|') + '|')
     lines.append('|' + block_row.join('|'))
   end
   
-  # lines.append('---' * (grid.width + 1) + '-')
   lines.join("\n")
 end
 
