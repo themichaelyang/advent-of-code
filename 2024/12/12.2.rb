@@ -115,34 +115,42 @@ def sample_input_3
   EOF
 end
 
-class Garden < Grid
-  def fill!(start)
-    perimeter = 0
-    area = 0
+def default_on_visit(type, coord, grid)
+  grid.set(coord, type.downcase)
+end
 
-    type = self.at(start)
-    stack = [start]
+def default_check_visited(type, coord, grid)
+  grid.at(coord) == type.downcase
+end
 
-    while stack.length > 0 do
-      coord = stack.pop
-      adjacent = Direction.clockwise.map {|dir| dir + coord}
+def fill_region(grid, start, check_visited=method(:default_check_visited), on_visit=method(:default_on_visit))
+  perimeter = 0
+  area = 0
 
-      connected = adjacent.select {|c| self.at(c) == type}
-      visited = adjacent.select {|c| self.at(c) == type.downcase}
-      
-      if self.at(coord) == type
-        perimeter += 4 - connected.length - visited.length
-        area += 1
-      end
+  type = grid.at(start)
+  stack = [start]
 
-      stack.concat(connected - visited)
+  while stack.length > 0 do
+    coord = stack.pop
+    adjacent = Direction.clockwise.map {|dir| dir + coord}
 
-      # need a way to mark a tile as visited by current fill
-      self.set(coord, type.downcase)
+    connected = adjacent.select {|c| grid.at(c) == type}
+    # visited = adjacent.select {|c| grid.at(c) == type.downcase}
+    visited = adjacent.select {|c| check_visited.call(type, c, grid)}
+    
+    if grid.at(coord) == type
+      perimeter += 4 - connected.length - visited.length
+      area += 1
     end
 
-    {type: type, perimeter: perimeter, area: area}
+    stack.concat(connected - visited)
+
+    on_visit.call(type, coord, grid)
+    # need a way to mark a tile as visited by current fill
+    # grid.set(coord, type.downcase)
   end
+
+  {type: type, perimeter: perimeter, area: area}
 end
 
 # For a given "vertex space" coordinate and direction,
@@ -230,13 +238,13 @@ end
 
 def part_1
   parsed = parse_input(read_input)
-  garden = Garden.new(parsed)  
+  garden = Grid.new(parsed)  
 
   regions = garden.each_coord do |coord|
     type = garden.at(coord) 
     visited = type.downcase == type 
     if type && !visited
-      garden.fill!(coord)
+      fill_region(garden, coord)
     end
   end.compact
 
@@ -249,13 +257,13 @@ end
 
 def part_2
   parsed = parse_input(sample_input_2)
-  garden = Garden.new(parsed)
+  garden = Grid.new(parsed)
 
   regions = garden.each_coord do |coord|
     type = garden.at(coord) 
     visited = type.downcase == type 
     if type && !visited
-      region = garden.fill!(coord)
+      region = fill_region(garden, coord)
       region[:sides] = outline_clockwise(garden, coord).to_a
       puts coord
       puts type
@@ -263,7 +271,6 @@ def part_2
       region
     end
   end.compact
-
 
   regions.sum {|r| r[:sides].count * r[:area]}
 end
