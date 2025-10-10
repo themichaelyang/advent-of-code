@@ -11,16 +11,8 @@ def sample_input
 # EEEC
 # EOF
 input = <<EOF
-RRRRIICCFF
-RRRRIICCCF
-VVRRRCCFFF
-VVRCCCJFFF
-VVVVCJJCFE
-VVIVCCJJEE
-VVIIICJJEE
-MIIIIIJJEE
-MIIISIJEEE
-MMMISSJEEE
+EE
+EX
 EOF
 end
 
@@ -88,6 +80,7 @@ class Grid2D < Array
   end
 end
 
+# up, right, down, left
 DIRECTIONS = [[0, -1], [1, 0], [0, 1], [-1, 0]]
 
 def fill!(grid, start_x, start_y)
@@ -147,72 +140,58 @@ def part_1
   end
 end
 
-def clockwise_90(dx, dy)
-  next_index = DIRECTIONS.index([dx, dy]) + 1
-  DIRECTIONS[next_index % DIRECTIONS.length]
+def towards(coord, direction)
+  [coord[0] + direction[0], coord[1] + direction[1]]
 end
 
-def make_corners(grid)
-  Grid.new(grid.height.times.map do |y|
-    Array.new(grid.width)
-  end)
+# Relative left of direction (90 degrees counter clockwise)
+def relative_left(direction)
+  DIRECTIONS[(DIRECTIONS.index(direction) - 1) % DIRECTIONS.length]
 end
 
-# go up until we find an edge
-def top_edge(grid, start_x, start_y)
-  x, y = start_x, start_y
-  
-  current = grid.get(start_x, start_y)
- 
-  while current do
-    y -= 1
-    current = grid.get(x, y)
-  end
-
-  [x, y]  
+def clockwise(direction)
+  DIRECTIONS[(DIRECTIONS.index(direction) + 1) % DIRECTIONS.length]
 end
 
-def fill_corners(grid, start_x, start_y)
-  perimeter = 0
-  area = 0
-  corners = make_corners(grid)
+def direction_to_s(direction)
+  ([:up, :right, :down, :left])[DIRECTIONS.index(direction)]
+end
 
-  # start right, since we're at a top edge
-  direction = [DIRECTIONS[1]]
-  start_x, start_y = top_edge(grid, start_x, start_y)
-  stack = [[start_x, start_y]]
+# assume we start on a square with an edge in the top left
+# index the corners by top left corner of grid
+def walk_edge_clockwise(grid, start_x, start_y)
+  corners = Set.new()
 
-  while stack.length > 0 do
-    top = stack.pop
-    x, y = top.first, top.last
+  # current is in edgespace (e.g. grid lines), always top left of square grid coords
+  current = [start_x, start_y]
+  direction = DIRECTIONS[0] # Up
+  type = grid.get(start_x, start_y)
 
-    adjacent = DIRECTIONS.map do |dx, dy|
-      [x + dx, y + dy]
-    end.uniq
+  while !corners.include?([current, direction])
+    # in blockspace 
+    righthand = towards(current, direction)
+    lefthand = towards(current, relative_left(direction))
 
-    connected = adjacent.select {|ax, ay| grid.get(ax, ay) == value}
-    visited = adjacent.select {|ax, ay| grid.get(ax, ay) == value.downcase}
-    
-    if grid.get(x, y) == value
-      perimeter += 4 - connected.length - visited.length
-      area += 1
+    p [current, direction_to_s(direction), righthand, lefthand]
+    # If it's an edge (wall on right), continue in direction
+    if grid.get(*righthand) == type && grid.get(*lefthand) != type
+      current = righthand
+    else
+      corners.add([current, direction])
+      direction = clockwise(direction)
     end
-
-    stack.concat(connected - visited)
-
-    # need a way to mark a tile as visited by current fill
-    grid.set(x, y, value.downcase)
-    debug stack, "stack"
   end
 
-  {value: value, perimeter: perimeter, area: area}
+  return corners.to_a.map(&:first).uniq
 end
 
 def part_2
   parsed = parse_input(sample_input)
-  # parsed = parse_input(read_input)
   grid = Grid2D.new(parsed)
+
+  walk_edge_clockwise(grid, 0, 0)
 end
 
 # puts "part 1: #{part_1}"
-puts "part 2: #{part_2}"
+# puts "part 2: #{part_2}"
+p part_2
