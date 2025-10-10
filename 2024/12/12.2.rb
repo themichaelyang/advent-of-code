@@ -8,14 +8,30 @@ class Grid
   def max_x = self.width - 1
   def max_y = self.height - 1
 
+  def within?(coord)
+    coord.x.between?(0, self.max_x) && coord.y.between?(0, self.max_y)
+  end
+
   def at(coord)
     if within?(coord)
       @matrix[coord.y][coord.x]
     end
   end
 
-  def within?(coord)
-    coord.x.between?(0, self.max_x) && coord.y.between?(0, self.max_y)
+  def set(coord, value)
+    if within?(coord)
+      @matrix[coord.y][coord.x] = value
+    else
+      raise Exception("#{coord.to_s} not in grid!")
+    end
+  end
+
+  def each_coord(&blk)
+    (0...self.height).flat_map { |y|
+      (0...self.width).map { |x| 
+        yield Coord.new(x, y)
+      }
+    }
   end
 end
 
@@ -41,7 +57,7 @@ class Direction < Coord
   def self.west = @@directions[:west]
 
   def self.clockwise = [north, east, south, west]
-  def rotate_clockwise = Direction.new(y, -x)
+  def rotate_clockwise = Direction.new(-y, x) # (-y, x) instead of (y, -x) because south is +y
   def to_s = "<#{@@directions.key(self)&.to_s}>" || super
 end
 
@@ -55,17 +71,78 @@ def parse_input(input)
   rows.map(&:chars)
 end
 
-def sample_input 
-#   input = <<EOF
-# AAAA
-# BBCD
-# BBCC
-# EEEC
-# EOF
-input = <<EOF
-EE
-EX
-EOF
+def sample_input
+  # squiggly heredoc <<~ ignores leading whitespace
+  <<~EOF
+    EE
+    EX
+  EOF
+end
+
+def sample_input_1
+  <<~EOF
+    RRRRIICCFF
+    RRRRIICCCF
+    VVRRRCCFFF
+    VVRCCCJFFF
+    VVVVCJJCFE
+    VVIVCCJJEE
+    VVIIICJJEE
+    MIIIIIJJEE
+    MIIISIJEEE
+    MMMISSJEEE
+  EOF
+end
+
+def sample_input_2
+  <<~EOF
+    AAAAAA
+    AAABBA
+    AAABBA
+    ABBAAA
+    ABBAAA
+    AAAAAA
+  EOF
+end
+
+def sample_input_3
+  <<~EOF
+    EEEEE
+    EXXXX
+    EEEEE
+    EXXXX
+    EEEEE
+  EOF
+end
+
+class Garden < Grid
+  def fill!(start)
+    perimeter = 0
+    area = 0
+
+    type = self.at(start)
+    stack = [start]
+
+    while stack.length > 0 do
+      coord = stack.pop
+      adjacent = Direction.clockwise.map {|dir| dir + coord}
+
+      connected = adjacent.select {|c| self.at(c) == type}
+      visited = adjacent.select {|c| self.at(c) == type.downcase}
+      
+      if self.at(coord) == type
+        perimeter += 4 - connected.length - visited.length
+        area += 1
+      end
+
+      stack.concat(connected - visited)
+
+      # need a way to mark a tile as visited by current fill
+      self.set(coord, type.downcase)
+    end
+
+    {type: type, perimeter: perimeter, area: area}
+  end
 end
 
 # For a given "vertex space" coordinate and direction,
@@ -111,7 +188,7 @@ def outline_clockwise(grid, start)
     lefthand, righthand = relative_left_and_right(vertex, direction)
     along_edge = grid.at(righthand) == type && grid.at(lefthand) != type
 
-    if along_edge 
+    if along_edge
       if changed_direction
         corners.add(vertex)
         changed_direction = false
@@ -119,6 +196,7 @@ def outline_clockwise(grid, start)
 
       vertex += direction
     else
+      p [vertex, direction.to_s]
       direction = direction.rotate_clockwise
       changed_direction = true
     end
@@ -150,13 +228,45 @@ def plot_corners(grid, corners)
   lines.join("\n")
 end
 
-def part_2
-  parsed = parse_input(sample_input)
-  grid = Grid.new(parsed)  
+def part_1
+  parsed = parse_input(read_input)
+  garden = Garden.new(parsed)  
 
-  corners = outline_clockwise(grid, Coord.new(0, 0))
+  regions = garden.each_coord do |coord|
+    type = garden.at(coord) 
+    visited = type.downcase == type 
+    if type && !visited
+      garden.fill!(coord)
+    end
+  end.compact
 
-  plot_corners(grid, corners)
+  regions.sum do |r|
+    # Pattern matching unpacking!
+    r => {perimeter:, area:}
+    perimeter * area
+  end
 end
 
-puts part_2
+def part_2
+  parsed = parse_input(sample_input_2)
+  garden = Garden.new(parsed)
+
+  regions = garden.each_coord do |coord|
+    type = garden.at(coord) 
+    visited = type.downcase == type 
+    if type && !visited
+      region = garden.fill!(coord)
+      region[:sides] = outline_clockwise(garden, coord).to_a
+      puts coord
+      puts type
+      puts plot_corners(garden, region[:sides])
+      region
+    end
+  end.compact
+
+
+  regions.sum {|r| r[:sides].count * r[:area]}
+end
+
+p part_1
+p part_2

@@ -117,8 +117,8 @@ def fill!(grid, start_x, start_y)
 end
 
 def part_1
-  parsed = parse_input(sample_input)
-  # parsed = parse_input(read_input)
+  # parsed = parse_input(sample_input)
+  parsed = parse_input(read_input)
   grid = Grid2D.new(parsed)
   debug grid 
 
@@ -140,58 +140,4 @@ def part_1
   end
 end
 
-def towards(coord, direction)
-  [coord[0] + direction[0], coord[1] + direction[1]]
-end
-
-# Relative left of direction (90 degrees counter clockwise)
-def relative_left(direction)
-  DIRECTIONS[(DIRECTIONS.index(direction) - 1) % DIRECTIONS.length]
-end
-
-def clockwise(direction)
-  DIRECTIONS[(DIRECTIONS.index(direction) + 1) % DIRECTIONS.length]
-end
-
-def direction_to_s(direction)
-  ([:up, :right, :down, :left])[DIRECTIONS.index(direction)]
-end
-
-# assume we start on a square with an edge in the top left
-# index the corners by top left corner of grid
-def walk_edge_clockwise(grid, start_x, start_y)
-  corners = Set.new()
-
-  # current is in edgespace (e.g. grid lines), always top left of square grid coords
-  current = [start_x, start_y]
-  direction = DIRECTIONS[0] # Up
-  type = grid.get(start_x, start_y)
-
-  while !corners.include?([current, direction])
-    # in blockspace 
-    righthand = towards(current, direction)
-    lefthand = towards(current, relative_left(direction))
-
-    p [current, direction_to_s(direction), righthand, lefthand]
-    # If it's an edge (wall on right), continue in direction
-    if grid.get(*righthand) == type && grid.get(*lefthand) != type
-      current = righthand
-    else
-      corners.add([current, direction])
-      direction = clockwise(direction)
-    end
-  end
-
-  return corners.to_a.map(&:first).uniq
-end
-
-def part_2
-  parsed = parse_input(sample_input)
-  grid = Grid2D.new(parsed)
-
-  walk_edge_clockwise(grid, 0, 0)
-end
-
-# puts "part 1: #{part_1}"
-# puts "part 2: #{part_2}"
-p part_2
+puts "part 1: #{part_1}"
