@@ -4,24 +4,21 @@ class Array
   end
 end
 
-def insert(step_size, inserts)
+def spin(step_size, inserts)
   list = [0]
   pos = 0
   inserts.times do |i|
     value = i + 1
     pos = (pos + step_size) % list.length
-    # p ["list", list]
-    # p [pos, value]
     list.insert_after(pos, value)
     pos = pos + 1
   end
 
-  # puts list.length == inserts + 1
   [list, pos]
 end
 
 def part_1
-  list, pos = spinlock(380, 2017)
+  list, pos = spin(380, 2017)
   list[pos + 1]
 end
 
