@@ -10,23 +10,24 @@ module Advent2025
       input = file.read
     end
 
+    #: (String, String) -> Array[Integer]
+    def all_index(str, char)
+      i = -1 #: Integer?
+      indices = []
+      # typed to appease Sorbet
+      while i = str.index(char, i.nil? ? str.length : i + 1)
+        indices.push(i)
+      end
+      indices
+    end
+
     class Part1
       extend Day7
 
-      #: (String, String) -> Array[Integer]
-      def self.all_index(str, char)
-        i = -1 #: Integer?
-        indices = []
-        # typed to appease Sorbet
-        while i = str.index(char, i.nil? ? str.length : i + 1)
-          indices.push(i)
-        end
-        indices
-      end
-
       def self.solve
         lines = read_input.split
-        start = lines.first&.index('S') or raise "No start found"
+        first_line = lines.first or raise "No first line"
+        start = first_line.index('S') or raise "No start found"
         beams = [start] #: Array[Integer]
         splits = 0
 
@@ -40,7 +41,7 @@ module Advent2025
               splits += 1
             end
           end
-          p line
+          # p line
           beams = all_index(line, '|')
         end
 
@@ -51,7 +52,49 @@ module Advent2025
     class Part2
       extend Day7
 
+      Path = Struct.new(:x, :prev, :ways)
+
+      #: (Array[Path?], Integer, Path) -> Path
+      def self.add_path(paths, i, current)
+        path = paths[i]
+        if path.nil?
+          paths[i] = Path.new(i, [current], current.ways)
+        else
+          path.prev.push(current)
+          path.ways += current.ways
+        end
+      end
+
       def self.solve
+        lines = read_input.split
+
+        # Appease Sorbet
+        first_line = lines.first or raise "No first line"
+        rest = lines[1..] or raise "No lines"
+        start = first_line.index('S') or raise "No start found"
+
+        paths = [nil] * first_line.length #: Array[Path?]
+        paths[start] = Path.new(start, [], 1)
+        splits = 0
+
+        rest.each do |line|
+          new_paths = [nil] * first_line.length #: Array[Path?]
+          paths.compact.each do |p|
+            b = p.x
+
+            case line[b]
+            when '.'
+              add_path(new_paths, b, p)
+            when '^'
+              add_path(new_paths, b + 1, p)
+              add_path(new_paths, b - 1, p)
+            end
+          end
+
+          paths = new_paths
+        end
+
+        paths.compact.map(&:ways).sum
       end
     end
   end
