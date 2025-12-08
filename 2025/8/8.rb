@@ -60,28 +60,40 @@ module Advent2025::Day8
     end
   end
 
-  class Part1
-    #: (Array[Integer], Array[Integer]) -> Numeric
-    def self.distance(a, b)
-      diffs = a.zip(b.map {-_1}).map(&:sum) #: as Array[Integer]
-      squares = diffs.map {_1 * _1}
-      Math.sqrt(squares.sum)
+  #: (Array[Integer], Array[Integer]) -> Numeric
+  def distance(a, b)
+    diffs = a.zip(b.map {-_1}).map(&:sum) #: as Array[Integer]
+    squares = diffs.map {_1 * _1}
+    Math.sqrt(squares.sum)
+  end
+
+  #: (String) -> Array[Array[Integer]]
+  def parse_input(input)
+    coords = input.split.map do |line|
+      line.split(',').map(&:to_i)
     end
+  end
+
+  #: (Array[Array[Integer]]) -> Array[[Numeric, Array[Integer], Array[Integer]]]
+  def compute_distances(coords)
+    distances = coords.combination(2).map do |pair|
+      a, b = pair #: as [Array[Integer], Array[Integer]]
+      if a != b
+        [distance(a, b), a, b]
+      end
+    end.compact.sort
+  end
+
+  class Part1
+    extend Advent2025::Day8
 
     #: (?[String, Integer]) -> Integer
     def self.solve(params=['example', 10])
       file_name, connections = params
       input = File.open(file_name).read
-      coords = input.split.map do |line|
-        line.split(',').map(&:to_i)
-      end
 
-      distances = coords.combination(2).map do |pair|
-        a, b = pair #: as [Array[Integer], Array[Integer]]
-        if a != b
-          [distance(a, b), a, b]
-        end
-      end.compact.sort
+      coords = parse_input(input)
+      distances = compute_distances(coords)
 
       uf = UnionFind.new(coords) #: UnionFind[Array[Integer]]
       distances.take(connections).each do |d|
@@ -93,6 +105,33 @@ module Advent2025::Day8
         .reduce(&:*)
     end
   end
+
+  class Part2
+    extend Advent2025::Day8
+
+    #: (String) -> Integer
+    def self.solve(file_name)
+      input = File.open(file_name).read
+
+      coords = parse_input(input)
+      distances = compute_distances(coords)
+
+      uf = UnionFind.new(coords) #: UnionFind[Array[Integer]]
+
+      distance, a, b = distances.shift #: as [Float, Array[Integer], Array[Integer]]
+      most_recent = [a, b]
+
+      until uf.roots.length == 1 || distances.length <= 0
+        distance, a, b = distances.shift #: as [Float, Array[Integer], Array[Integer]]
+        most_recent = [a, b]
+        uf.union_sets(a, b)
+      end
+
+      x_coords = most_recent.map(&:first) #: as Array[Integer]
+      x_coords.reduce(&:*) #: as Integer
+    end
+  end
 end
 
 p Advent2025::Day8::Part1.solve(['input', 1000])
+p Advent2025::Day8::Part2.solve('input')
