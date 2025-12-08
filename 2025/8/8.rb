@@ -94,8 +94,8 @@ module Advent2025::Day8
 
       coords = parse_input(input)
       distances = compute_distances(coords)
-
       uf = UnionFind.new(coords) #: UnionFind[Array[Integer]]
+
       distances.take(connections).each do |d|
         distance, a, b = d
         uf.union_sets(a, b)
@@ -117,9 +117,7 @@ module Advent2025::Day8
       distances = compute_distances(coords)
 
       uf = UnionFind.new(coords) #: UnionFind[Array[Integer]]
-
-      distance, a, b = distances.shift #: as [Float, Array[Integer], Array[Integer]]
-      most_recent = [a, b]
+      most_recent = [] #: Array[Array[Integer]]
 
       until uf.roots.length == 1 || distances.length <= 0
         distance, a, b = distances.shift #: as [Float, Array[Integer], Array[Integer]]
@@ -128,7 +126,7 @@ module Advent2025::Day8
       end
 
       x_coords = most_recent.map(&:first) #: as Array[Integer]
-      x_coords.reduce(&:*) #: as Integer
+      x_coords.reduce(1, &:*)
     end
   end
 end
