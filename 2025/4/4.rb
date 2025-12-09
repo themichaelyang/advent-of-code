@@ -9,10 +9,11 @@ module Advent2025::Day4
     #: Integer
     attr_reader :width
     attr_reader :height
+    attr_reader :grid
 
     #: (Array[Array[String]]) -> void
     def initialize(grid)
-      @grid = grid          #: Array[Array[String]]
+      @grid = grid #: Array[Array[String]]
       raise "invalid first row" unless width = grid.first&.length
       @width = width
       @height = grid.length
@@ -25,16 +26,31 @@ module Advent2025::Day4
 
       @grid.dig(y, x)
     end
+
+    #: (Integer, Integer) -> String
+    def get!(x, y)
+      v = get(x, y)
+      raise "nil value" if v.nil?
+      v
+    end
+
+    #: (Integer, Integer, String) -> String
+    def set(x, y, v)
+      row = @grid[y] #: as Array[String]
+      row[x] = v
+    end
+  end
+
+  #: (Grid, Integer, Integer) -> Integer
+  def count_adjacent(grid, x, y)
+    [-1, 0, 1].repeated_permutation(2).sum do |delta|
+      dx, dy = delta #: as [Integer, Integer]
+      grid.get(x + dx, y + dy) == '@' ? 1 : 0
+    end - 1
   end
 
   class Part1
-    #: (Grid, Integer, Integer) -> Integer
-    def self.count_adjacent(grid, x, y)
-      [-1, 0, 1].repeated_permutation(2).sum do |delta|
-        dx, dy = delta #: as [Integer, Integer]
-        grid.get(x + dx, y + dy) == '@' ? 1 : 0
-      end - 1
-    end
+    extend Advent2025::Day4
 
     #: () -> Integer
     def self.solve
@@ -52,11 +68,37 @@ module Advent2025::Day4
   end
 
   class Part2
+    extend Advent2025::Day4
+
+    #: () -> Integer
     def self.solve
       input = File.open('input').read
+      grid = Grid.new(input.split.map { |line| line.chars })
+      grid_other = Grid.new(grid.grid)
+      accessible = 0
+      changed = true #: bool
+
+      while changed
+        changed = false
+        grid.height.times.map do |y|
+          grid.width.times.map do |x|
+            if grid.get(x, y) == '@' && count_adjacent(grid, x, y) < 4
+              grid_other.set(x, y, '.')
+              accessible += 1
+              changed = true
+            else
+              grid_other.set(x, y, grid.get!(x, y))
+            end
+          end
+        end
+
+        grid, grid_other = grid_other, grid
+      end
+
+      accessible
     end
   end
 end
 
 p Advent2025::Day4::Part1.solve
-# puts Advent2025::Day4::Part2.solve
+p Advent2025::Day4::Part2.solve
