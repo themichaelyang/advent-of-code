@@ -41,8 +41,46 @@ module Advent2025::Day5
   class Part2
     extend Advent2025::Day5
 
+    #: (Range[Integer], Range[Integer]) -> Range[Integer]
+    def self.merge(r1, r2)
+      ([r1.min, r2.min].min)..([r1.max, r2.max].max)
+    end
+
+    #: (Range[Integer], Array[Range[Integer]]) -> Array[Range[Integer]]
+    def self.consolidate(new_range, consolidated)
+      # lowest existing range where min >= new_range.min
+      insert_at = consolidated.bsearch_index { |c| c.min >= new_range.min } || consolidated.length
+
+      if insert_at > 0
+        lower = consolidated[insert_at - 1] #: as Range[Integer]
+
+        if lower.overlap?(new_range)
+          new_range = merge(lower, new_range)
+          consolidated.delete_at(insert_at - 1)
+          insert_at -= 1
+        end
+      end
+
+      while (candidate = consolidated[insert_at]) && new_range.overlap?(candidate)
+        new_range = merge(new_range, candidate)
+        consolidated.delete_at(insert_at)
+        candidate = consolidated[insert_at]
+      end
+
+      consolidated.insert(insert_at, new_range)
+    end
+
     def self.solve
-      # input = File.open('example').read
+      input = File.open('input').read
+      ranges, _ids = parse_input(input)
+
+      consolidated = [] #: Array[Range[Integer]]
+
+      ranges.each do |r|
+        consolidated = consolidate(r, consolidated)
+      end
+
+      consolidated.sum(&:size)
     end
   end
 end
