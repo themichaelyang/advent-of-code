@@ -74,6 +74,7 @@ module Advent2025::Day5
       input = File.open('input').read
       ranges, _ids = parse_input(input)
 
+      # Claude points out: can sort once and then merge instead of bsearch
       consolidated = [] #: Array[Range[Integer]]
 
       ranges.each do |r|
