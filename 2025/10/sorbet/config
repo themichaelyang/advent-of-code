@@ -1,0 +1,5 @@
+--enable-experimental-rbs-comments
+--dir
+.
+--ignore=/tmp/
+--ignore=/vendor/bundle
