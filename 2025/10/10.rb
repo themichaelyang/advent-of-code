@@ -19,9 +19,8 @@ module Advent2025::Day10
     lines = input.split("\n")
     lines.map do |line|
       words = line.split(' ')
-      goal = words.first&.delete("[]")&.chars&.map { _1 == '#' } #: as Array[bool]
 
-      # p words
+      goal = words.first&.delete("[]")&.chars&.map { _1 == '#' } #: as Array[bool]
 
       buttons = words[1..-2]&.map do |b|
         b[1..-2]&.split(',')&.map(&:to_i)
@@ -74,6 +73,7 @@ module Advent2025::Day10
         optimizer.minimize(cost)
         model = []
         if optimizer.satisfiable?
+          # need to transform instead of returning the model or segfaults
           optimizer.model.each do |var, state|
             model[var.to_s["btn_".length..].to_i] = state.to_b
           end
@@ -90,10 +90,47 @@ module Advent2025::Day10
     extend Advent2025::Day10
 
     def self.solve
-      input = File.open('example').read
+      parse(File.open('input').read).sum do |_goal, buttons, joltages|
+        button_press_vars = buttons.each_with_index.map { |_, i| Z3.Int("btn_#{i}") }
+        buttons_for_jolt = joltages.map { Array.new }
+
+        buttons.each_with_index do |btn, bi|
+          btn.each do |joltage_index|
+            buttons_for_jolt[joltage_index] << button_press_vars[bi]
+          end
+        end
+
+        joltage_vars = buttons_for_jolt.map do |button_vars|
+          button_vars.reduce do |acc, bv|
+            acc + bv
+          end
+        end
+
+        optimizer = Z3::Optimize.new
+
+        joltages.each_with_index do |expected, ji|
+          optimizer.assert(expected == joltage_vars[ji])
+        end
+
+        button_press_vars.each do |bv|
+          optimizer.assert(bv >= 0)
+        end
+
+        cost = button_press_vars.reduce { |acc, bv| acc + bv }
+        optimizer.minimize(cost)
+
+        model = []
+        if optimizer.satisfiable?
+          optimizer.model.each do |var, state|
+            model[var.to_s["btn_".length..].to_i] = state.to_i
+          end
+        end
+
+        model.sum
+      end
     end
   end
 end
 
 p Advent2025::Day10::Part1.solve
-# p Advent2025::Day10::Part2.solve
+p Advent2025::Day10::Part2.solve
