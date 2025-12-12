@@ -25,6 +25,7 @@ module Advent2025::Day12
   class Part1
     extend Advent2025::Day12
 
+    # Solved thanks to hints from Keith and Russell. This solution feels so wrong!
     def self.solve
       tiles, regions = parse(File.open('input').read)
       tile_areas = tiles.map(&:flatten).map { _1.count('#') }
