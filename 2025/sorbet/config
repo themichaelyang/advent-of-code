@@ -1,3 +1,5 @@
 --enable-experimental-rbs-comments
 --dir
 .
+--ignore
+10
