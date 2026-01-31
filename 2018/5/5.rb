@@ -42,39 +42,54 @@ def react_polymer(polymer)
   units
 end
 
+def part_1_naive(filename='input')
+  # remove trailing newline!!
+  react_polymer(File.read(filename).chomp).length
+end
+
 def single_pass_reaction(polymer)
   units = polymer.chars
   stack = [units.first]
 
   units.length.times do |i|
-    char = units[i + 1]
+    char = units[i + 1] # last one will be nil
 
-    if stack.last && char && (stack.last.ord - char.ord).abs == 32
-      stack.pop
-    else
-      stack.push(char)
+    if char
+      if stack.last && (stack.last.ord - char.ord).abs == 32
+        stack.pop
+      else
+        stack.push(char)
+      end
     end
   end
 
   stack
 end
 
-def part_1_naive(filename='input')
-  # remove trailing newline!!
-  react_polymer(File.read(filename).chomp).length
-end
-
 def part_1(filename='input')
   single_pass_reaction(File.read(filename).chomp).length
 end
 
-[
-  ['Aa', ''], ['aA', ''], ['aAaA', ''], ['aAAa', ''], ['aAa', 'a'], ['aa', 'aa'],
-  ['AA', 'AA'], ['aBAb', 'aBAb'], ['aBbbBA', ''], ['bbBB', ''], ['aacC', 'aa'],
-  ['aAcC', ''], ['abcCBA', ''], ['dabAcCaCBAcCcaDA', 'dabCBAcaDA']
-].each do |input, expected|
-  raise unless react_polymer(input).join == expected
-  raise unless single_pass_reaction(input).join == expected
+def part_2(filename='input')
+  polymer = File.read(filename).chomp
+  types = Set.new(polymer.chars.map(&:downcase))
+
+  lengths = types.map do |type|
+    [single_pass_reaction(polymer.delete(type + type.upcase)).length, type]
+  end
+
+  lengths.min
+end
+
+if ARGV.include?('--test')
+  [
+    ['Aa', ''], ['aA', ''], ['aAaA', ''], ['aAAa', ''], ['aAa', 'a'], ['aa', 'aa'],
+    ['AA', 'AA'], ['aBAb', 'aBAb'], ['aBbbBA', ''], ['bbBB', ''], ['aacC', 'aa'],
+    ['aAcC', ''], ['abcCBA', ''], ['dabAcCaCBAcCcaDA', 'dabCBAcaDA']
+  ].each do |input, expected|
+    raise unless react_polymer(input).join == expected
+    raise unless single_pass_reaction(input).join == expected
+  end
 end
 
 if ARGV.include?('--benchmark')
@@ -92,3 +107,4 @@ if ARGV.include?('--benchmark')
 end
 
 p part_1
+p part_2
