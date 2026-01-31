@@ -26,7 +26,7 @@ def reaction_step(units)
   end
 
   result = unreacted_units.compact
-  p result.join
+  # p result.join
 
   [result, changed]
 end
@@ -42,36 +42,36 @@ def react_polymer(polymer)
   units
 end
 
-# def single_pass_reaction(units)
-#   stack = []
-#   units.length.times do |i|
-#     next_unit = units[i]
+def single_pass_reaction(polymer)
+  units = polymer.chars
+  stack = [units.first]
 
-#     if stack.last == 
-#   end
-# end
+  units.length.times do |i|
+    char = units[i + 1]
+
+    if stack.last && char && (stack.last.ord - char.ord).abs == 32
+      stack.pop
+    else
+      stack.push(char)
+    end
+  end
+
+  stack
+end
 
 def part_1(filename='input')
-  // remove trailing newline!!
+  # remove trailing newline!!
   react_polymer(File.read(filename).chomp).length
 end
 
-raise unless react_polymer('Aa').join == ''
-raise unless react_polymer('aA').join == ''
-raise unless react_polymer('aAaA').join == ''
-raise unless react_polymer('aAAa').join == ''
-raise unless react_polymer('aAa').join == 'a'
-raise unless react_polymer('aa').join == 'aa'
-raise unless react_polymer('AA').join == 'AA'
-raise unless react_polymer('aBAb').join == 'aBAb'
-raise unless react_polymer('aBbbBA').join == ''
-raise unless react_polymer('bbBB').join == ''
-raise unless react_polymer('aacC').join == 'aa'
-raise unless react_polymer('aAcC').join == ''
-raise unless react_polymer('abcCBA').join == ''
-
-raise unless react_polymer('dabAcCaCBAcCcaDA').join == 'dabCBAcaDA'
-raise unless react_polymer('dabAcCaCBAcCcaDA').length == 10
+[
+  ['Aa', ''], ['aA', ''], ['aAaA', ''], ['aAAa', ''], ['aAa', 'a'], ['aa', 'aa'],
+  ['AA', 'AA'], ['aBAb', 'aBAb'], ['aBbbBA', ''], ['bbBB', ''], ['aacC', 'aa'],
+  ['aAcC', ''], ['abcCBA', ''], ['dabAcCaCBAcCcaDA', 'dabCBAcaDA']
+].each do |input, expected|
+  raise unless react_polymer(input).join == expected
+  raise unless single_pass_reaction(input).join == expected
+end
 
 require 'benchmark'
 
@@ -81,6 +81,12 @@ Benchmark.bm do |benchmark|
       react_polymer('dabAcCaCBAcCcaDA')
     end
   end
+
+  benchmark.report('single pass') do
+    100.times do
+      single_pass_reaction('dabAcCaCBAcCcaDA')
+    end
+  end
 end
 
-p part_1
+# p part_1
