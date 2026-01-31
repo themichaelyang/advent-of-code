@@ -59,9 +59,13 @@ def single_pass_reaction(polymer)
   stack
 end
 
-def part_1(filename='input')
+def part_1_naive(filename='input')
   # remove trailing newline!!
   react_polymer(File.read(filename).chomp).length
+end
+
+def part_1(filename='input')
+  single_pass_reaction(File.read(filename).chomp).length
 end
 
 [
@@ -73,20 +77,18 @@ end
   raise unless single_pass_reaction(input).join == expected
 end
 
-require 'benchmark'
+if ARGV.include?('--benchmark')
+  require 'benchmark'
 
-Benchmark.bm do |benchmark|
-  benchmark.report('original') do
-    100.times do
-      react_polymer('dabAcCaCBAcCcaDA')
+  Benchmark.bm do |benchmark|
+    benchmark.report('naive') do
+      part_1_naive
     end
-  end
 
-  benchmark.report('single pass') do
-    100.times do
-      single_pass_reaction('dabAcCaCBAcCcaDA')
+    benchmark.report('single pass') do
+      part_1
     end
   end
 end
 
-# p part_1
+p part_1
