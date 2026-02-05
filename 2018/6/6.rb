@@ -60,8 +60,7 @@ def index_to_chr(i)
   (i + 'A'.ord).chr
 end
 
-def part_1(filename='input')
-  coords = parse(filename)
+def boundary(coords)
   hull = giftwrap(coords)
   hull_xs = hull.map(&:x)
   hull_ys = hull.map(&:y)
@@ -71,6 +70,13 @@ def part_1(filename='input')
 
   width = bottom_right.x - top_left.x
   height = bottom_right.y - top_left.y
+
+  [top_left, width, height]
+end
+
+def part_1(filename='input')
+  coords = parse(filename)
+  top_left, width, height = boundary(coords)
 
   # can't use [Array.new(width)] * height because it will dupe the reference
   grid = Array.new(height) { Array.new(width) }
@@ -112,6 +118,24 @@ def part_1(filename='input')
   [index_to_chr(index), count]
 end
 
+def part_2(filename='input')
+  coords = parse(filename)
+  top_left, width, height = boundary(coords)
+  size = 0
+
+  height.times do |y|
+    width.times do |x|
+      total = coords.sum { |c| manhattan_distance(c, [x + top_left.x, y + top_left.y]) }
+
+      if total < 10000
+        size += 1
+      end
+    end
+  end
+
+  size
+end
+
 def display_grid(grid)
   grid.map do |row|
     row.map {|i| i.nil? ? BLANK : index_to_chr(i)}.join
@@ -126,3 +150,4 @@ if ARGV.include?('--test')
 end
 
 p part_1
+p part_2
