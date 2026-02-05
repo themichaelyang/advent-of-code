@@ -74,6 +74,31 @@ def boundary(coords)
   [top_left, width, height]
 end
 
+require 'chunky_png'
+
+def grid_to_image(grid, filename='output.png')
+  height = grid.length
+  width = grid.first.length
+
+  # Generate distinct colors for each region
+  colors = {}
+
+  image = ChunkyPNG::Image.new(width, height)
+
+  grid.each_with_index do |row, y|
+    row.each_with_index do |cell, x|
+      if cell.nil?
+        image[x, y] = ChunkyPNG::Color::WHITE
+      else
+        colors[cell] ||= ChunkyPNG::Color.rgb(rand(256), rand(256), rand(256))
+        image[x, y] = colors[cell]
+      end
+    end
+  end
+
+  image.save(filename)
+end
+
 def part_1(filename='input')
   coords = parse(filename)
   top_left, width, height = boundary(coords)
@@ -104,6 +129,7 @@ def part_1(filename='input')
   end
 
   puts display_grid(grid)
+  grid_to_image(grid)
 
   borders = Set.new
   borders += Set.new(grid.first.compact.map {|i| coords[i]})
