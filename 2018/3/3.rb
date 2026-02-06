@@ -37,6 +37,15 @@ def display_grid(grid)
   end.join("\n")
 end
 
+def get_grid_bounds(claims)
+  min_x, max_x = claims.map { |c| [c[:x], c[:x] + c[:width] - 1] }.flatten.minmax
+  min_y, max_y = claims.map { |c| [c[:y], c[:y] + c[:height] - 1] }.flatten.minmax
+  width = max_x - min_x + 1
+  height = max_y - min_y + 1
+
+  [min_x, min_y, width, height]
+end
+
 # we could use a pixel grid (input size is small enough), but we can also slice it into regions,
 # where each x, y is some combination of an x and a y from the regions.
 # consider that any overlap's corners must be the x of an existing region and a y of a existing region.
@@ -44,17 +53,7 @@ end
 # lets do the easy one first:
 def part_1_naive(filename='input')
   claims = parse(filename)
-  min_x, max_x = claims.map { |c| [c[:x], c[:x] + c[:width] - 1] }.flatten.minmax
-  min_y, max_y = claims.map { |c| [c[:y], c[:y] + c[:height] - 1] }.flatten.minmax
-  # area = claims.sum { |c| c[:width] * c[:height] }
-  # 486775
-  # p area
-
-  width = max_x - min_x + 1
-  height = max_y - min_y + 1
-
-  # 999000
-  # p width * height
+  min_x, min_y, width, height = get_grid_bounds(claims)
   cover = Array.new(height) { Array.new(width) {0} }
 
   claims.each do |claim|
@@ -71,8 +70,31 @@ def part_1_naive(filename='input')
     row.count { |coverage| coverage >= 2 }
   end
 
-  # puts display_grid(grid)
   overlap
+end
+
+def part_2(filename='input')
+  claims = parse(filename)
+  min_x, min_y, width, height = get_grid_bounds(claims)
+  cover = Array.new(height) { Array.new(width) {[]} }
+  overlapping = Set.new
+
+  claims.each_with_index do |claim, i|
+    grid_x = claim[:x] - min_x
+    grid_y = claim[:y] - min_y
+
+    claim[:width].times do |dx|
+      claim[:height].times do |dy|
+        cover[grid_y + dy][grid_x + dx] << i
+
+        if cover[grid_y + dy][grid_x + dx].length >= 2
+          overlapping.merge(cover[grid_y + dy][grid_x + dx])
+        end
+      end
+    end
+  end
+
+  (Set.new(claims.count.times.to_a) - overlapping).first + 1 # indexed starting at 1 in input
 end
 
 if ARGV.include?('--test')
@@ -86,3 +108,4 @@ if ARGV.include?('--test')
 end
 
 p part_1_naive
+p part_2
