@@ -46,12 +46,15 @@ def get_grid_bounds(claims)
   [min_x, min_y, width, height]
 end
 
-# we could use a pixel grid (input size is small enough), but we can also slice it into regions,
+
+# we use a "pixel" grid (input size is small enough), but we can also slice it into regions,
 # where each x, y is some combination of an x and a y from the regions.
 # consider that any overlap's corners must be the x of an existing region and a y of a existing region.
 #
-# lets do the easy one first:
-def part_1_naive(filename='input')
+# regions aren't strictly better, because the analysis is now in terms of regions instead of area of the rects
+#
+# this uses a pixel grid:
+def part_1(filename='input')
   claims = parse(filename)
   min_x, min_y, width, height = get_grid_bounds(claims)
   cover = Array.new(height) { Array.new(width) {0} }
@@ -107,5 +110,5 @@ if ARGV.include?('--test')
   Testing.summary
 end
 
-p part_1_naive
+p part_1
 p part_2
